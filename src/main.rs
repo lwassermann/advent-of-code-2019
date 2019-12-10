@@ -1,3 +1,5 @@
+mod day_01_fuel_calculations;
+
 fn main() {
-    println!("Hello, world!");
+    day_01_fuel_calculations::calculate()
 }
