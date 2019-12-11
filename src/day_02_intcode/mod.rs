@@ -71,8 +71,8 @@ fn find_error_input() {
   let mut memory = Vec::new();
   load_memory(&mut memory);
 
-  for noun in 0..99 {
-    for verb in 0..99 {
+  for noun in 0..100 {
+    for verb in 0..100 {
       let mut attempt = memory.clone();
       attempt[1] = noun;
       attempt[2] = verb;
