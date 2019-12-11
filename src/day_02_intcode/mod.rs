@@ -13,43 +13,43 @@ fn load_memory(into: &mut Vec<u64>) {
   into.extend_from_slice(&program);
 }
 
-fn lookup(memory: &[u64], position: usize) -> u64 {
-  let lvalue = memory[position] as usize;
+fn lookup(memory: &[u64], address: usize) -> u64 {
+  let lvalue = memory[address] as usize;
   memory[lvalue]
 }
 
-fn set(memory: &mut [u64], position: usize, value: u64) {
-  let lvalue = memory[position] as usize;
+fn set(memory: &mut [u64], address: usize, value: u64) {
+  let lvalue = memory[address] as usize;
   memory[lvalue] = value;
 }
 
 fn interpret(memory: &mut [u64]) {
-  let mut position: usize = 0;
+  let mut instruction_pointer: usize = 0;
   loop {
-    let opcode = memory[position];
+    let opcode = memory[instruction_pointer];
     if opcode == 99 {
       return;
     } else if opcode == 1 {
       set(
         memory,
-        position + 3,
-        lookup(memory, position + 1) + lookup(memory, position + 2),
+        instruction_pointer + 3,
+        lookup(memory, instruction_pointer + 1) + lookup(memory, instruction_pointer + 2),
       );
-      position += 4;
+      instruction_pointer += 4;
     } else if opcode == 2 {
       set(
         memory,
-        position + 3,
-        lookup(memory, position + 1) * lookup(memory, position + 2),
+        instruction_pointer + 3,
+        lookup(memory, instruction_pointer + 1) * lookup(memory, instruction_pointer + 2),
       );
-      position += 4;
+      instruction_pointer += 4;
     } else {
       panic!("Unknown opcode {}", opcode)
     }
   }
 }
 
-pub fn calculate() {
+fn find_trajectory() {
   let mut memory = Vec::new();
   load_memory(&mut memory);
 
@@ -57,7 +57,30 @@ pub fn calculate() {
   memory[2] = 2;
 
   interpret(&mut memory);
-  println!("Value at position 0: {}", memory[0])
+  println!("Value at address 0: {}", memory[0])
+}
+
+fn find_error_input() {
+  let mut memory = Vec::new();
+  load_memory(&mut memory);
+
+  for noun in 0..99 {
+    for verb in 0..99 {
+      let mut attempt = memory.clone();
+      attempt[1] = noun;
+      attempt[2] = verb;
+      interpret(&mut attempt);
+      if attempt[0] == 19690720 {
+        println!("Found parameters: {} {}", noun, verb);
+        return;
+      }
+    }
+  }
+}
+
+pub fn calculate() {
+  find_trajectory();
+  find_error_input();
 }
 
 #[cfg(test)]
