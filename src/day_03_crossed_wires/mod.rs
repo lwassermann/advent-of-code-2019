@@ -118,13 +118,6 @@ where
     .collect()
 }
 
-fn layout_circuit(wires: (&str, &str)) -> Circuit {
-  (
-    layout_wire(wires.0.split(",")),
-    layout_wire(wires.1.split(",")),
-  )
-}
-
 fn crossings(circuit: &Circuit) -> Vec<Point> {
   let (a, b) = circuit;
   b.into_iter()
@@ -147,12 +140,23 @@ fn get_closest_crossing(circuit: &Circuit) -> i32 {
 }
 
 pub fn calculate() {
-  println!("Hello World!")
+  let input = fs::read_to_string("./src/day_03_crossed_wires/input.txt")
+    .expect("Something went wrong reading the input file from the day-folder:");
+  let mut wires = input.lines().map(|wire| layout_wire(wire.split(',')));
+  let circuit = (wires.next().unwrap(), wires.next().unwrap());
+  println!("Crossing distance: {}", get_closest_crossing(&circuit));
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn layout_circuit(wires: (&str, &str)) -> Circuit {
+    (
+      layout_wire(wires.0.split(",")),
+      layout_wire(wires.1.split(",")),
+    )
+  }
 
   #[test]
   fn test_layout_edge() {
