@@ -27,24 +27,31 @@ fn interpret(memory: &mut [u64]) {
   let mut instruction_pointer: usize = 0;
   loop {
     let opcode = memory[instruction_pointer];
-    if opcode == 99 {
-      return;
-    } else if opcode == 1 {
-      set(
-        memory,
-        instruction_pointer + 3,
-        lookup(memory, instruction_pointer + 1) + lookup(memory, instruction_pointer + 2),
-      );
-      instruction_pointer += 4;
-    } else if opcode == 2 {
-      set(
-        memory,
-        instruction_pointer + 3,
-        lookup(memory, instruction_pointer + 1) * lookup(memory, instruction_pointer + 2),
-      );
-      instruction_pointer += 4;
-    } else {
-      panic!("Unknown opcode {}", opcode)
+    match opcode {
+      1 => {
+        set(
+          memory,
+          instruction_pointer + 3,
+          lookup(memory, instruction_pointer + 1) + lookup(memory, instruction_pointer + 2),
+        );
+        instruction_pointer += 4;
+      }
+      2 => {
+        set(
+          memory,
+          instruction_pointer + 3,
+          lookup(memory, instruction_pointer + 1) * lookup(memory, instruction_pointer + 2),
+        );
+        instruction_pointer += 4;
+      }
+      99 => {
+        return;
+        // instruction_pointer += 1;
+      }
+      _ => panic!(
+        "Unknown opcode {} at address {}",
+        opcode, instruction_pointer
+      ),
     }
   }
 }
