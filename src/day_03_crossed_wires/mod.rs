@@ -24,9 +24,16 @@ impl Edge {
       if contains(self.from.y, other.from.y, other.to.y)
         && contains(other.from.x, self.from.x, self.to.x)
       {
+        let x = other.from.x;
+        let y = self.from.y;
+
         Some(Point {
-          x: other.from.x,
-          y: self.from.y,
+          x,
+          y,
+          timing: self.from.timing
+            + ((self.from.x - x).abs() as u32)
+            + other.from.timing
+            + ((other.from.y - y).abs() as u32),
         })
       } else {
         None
@@ -45,11 +52,20 @@ impl Edge {
 struct Point {
   x: i32,
   y: i32,
+  timing: u32,
 }
 
 impl Point {
   fn distance(&self) -> i32 {
     self.x.abs() + self.y.abs()
+  }
+
+  fn translate(&self, x: i32, y: i32) -> Point {
+    Point {
+      x: self.x + x,
+      y: self.y + y,
+      timing: self.timing + ((x + y).abs() as u32),
+    }
   }
 }
 
@@ -72,13 +88,6 @@ fn parse_dir(indicator: char) -> Direction {
   }
 }
 
-fn translate(point: &Point, x: i32, y: i32) -> Point {
-  Point {
-    x: point.x + x,
-    y: point.y + y,
-  }
-}
-
 fn layout_edge(from: Point, movement: &str) -> Edge {
   let direction = parse_dir(movement.chars().next().unwrap());
   let distance = movement[1..]
@@ -88,19 +97,19 @@ fn layout_edge(from: Point, movement: &str) -> Edge {
   match direction {
     Direction::Right => Edge {
       from,
-      to: translate(&from, distance, 0),
+      to: from.translate(distance, 0),
     },
     Direction::Left => Edge {
       from,
-      to: translate(&from, -distance, 0),
+      to: from.translate(-distance, 0),
     },
     Direction::Up => Edge {
       from,
-      to: translate(&from, 0, distance),
+      to: from.translate(0, distance),
     },
     Direction::Down => Edge {
       from,
-      to: translate(&from, 0, -distance),
+      to: from.translate(0, -distance),
     },
   }
 }
@@ -110,11 +119,18 @@ where
   I::Item: AsRef<str>,
 {
   directions
-    .scan(Point { x: 0, y: 0 }, |wire_end, direction| {
-      let edge = layout_edge(*wire_end, direction.as_ref());
-      *wire_end = edge.to;
-      Some(edge)
-    })
+    .scan(
+      Point {
+        x: 0,
+        y: 0,
+        timing: 0,
+      },
+      |wire_end, direction| {
+        let edge = layout_edge(*wire_end, direction.as_ref());
+        *wire_end = edge.to;
+        Some(edge)
+      },
+    )
     .collect()
 }
 
@@ -139,12 +155,23 @@ fn get_closest_crossing(circuit: &Circuit) -> i32 {
     .unwrap()
 }
 
+fn get_first_crossing(circuit: &Circuit) -> u32 {
+  crossings(circuit)
+    .into_iter()
+    .fold(None, |maybe_distance, crossing| match maybe_distance {
+      None => Some(crossing.timing),
+      Some(timing) => Some(timing.min(crossing.timing)),
+    })
+    .unwrap()
+}
+
 pub fn calculate() {
   let input = fs::read_to_string("./src/day_03_crossed_wires/input.txt")
     .expect("Something went wrong reading the input file from the day-folder:");
   let mut wires = input.lines().map(|wire| layout_wire(wire.split(',')));
   let circuit = (wires.next().unwrap(), wires.next().unwrap());
   println!("Crossing distance: {}", get_closest_crossing(&circuit));
+  println!("Crossing signal time: {}", get_first_crossing(&circuit));
 }
 
 #[cfg(test)]
@@ -158,13 +185,23 @@ mod tests {
     )
   }
 
+  const ZERO: Point = Point {
+    x: 0,
+    y: 0,
+    timing: 0,
+  };
+
   #[test]
   fn test_layout_edge() {
     assert_eq!(
-      layout_edge(Point { x: 0, y: 0 }, "R75"),
+      layout_edge(ZERO, "R75"),
       Edge {
-        from: Point { x: 0, y: 0 },
-        to: Point { x: 75, y: 0 },
+        from: ZERO,
+        to: Point {
+          x: 75,
+          y: 0,
+          timing: 75
+        },
       }
     );
   }
@@ -172,37 +209,73 @@ mod tests {
   #[test]
   fn test_intersection() {
     let edge = Edge {
-      from: Point { x: 0, y: 0 },
-      to: Point { x: 75, y: 0 },
+      from: ZERO,
+      to: Point {
+        x: 75,
+        y: 0,
+        timing: 75,
+      },
     };
     assert_eq!(
       edge.intersect(&Edge {
-        from: Point { x: 0, y: 2 },
-        to: Point { x: 75, y: 2 },
+        from: Point {
+          x: 0,
+          y: 2,
+          timing: 2
+        },
+        to: Point {
+          x: 75,
+          y: 2,
+          timing: 77
+        },
       }),
       None
     );
 
     assert_eq!(
       edge.intersect(&Edge {
-        from: Point { x: 0, y: 0 },
-        to: Point { x: 0, y: 75 },
+        from: ZERO,
+        to: Point {
+          x: 0,
+          y: 75,
+          timing: 75
+        },
       }),
-      Some(Point { x: 0, y: 0 })
+      Some(ZERO)
     );
 
     assert_eq!(
       edge.intersect(&Edge {
-        from: Point { x: 20, y: 0 },
-        to: Point { x: 20, y: 75 },
+        from: Point {
+          x: 20,
+          y: 0,
+          timing: 20
+        },
+        to: Point {
+          x: 20,
+          y: 75,
+          timing: 95
+        },
       }),
-      Some(Point { x: 20, y: 0 })
+      Some(Point {
+        x: 20,
+        y: 0,
+        timing: 40
+      })
     );
 
     assert_eq!(
       edge.intersect(&Edge {
-        from: Point { x: 76, y: 75 },
-        to: Point { x: 76, y: 0 },
+        from: Point {
+          x: 76,
+          y: 75,
+          timing: 200
+        },
+        to: Point {
+          x: 76,
+          y: 0,
+          timing: 275
+        },
       }),
       None
     );
@@ -217,6 +290,7 @@ mod tests {
     let circuit = layout_circuit(wires);
     println!("{:?}", crossings(&circuit));
     assert_eq!(get_closest_crossing(&circuit), 159);
+    assert_eq!(get_first_crossing(&circuit), 610);
   }
 
   #[test]
@@ -228,5 +302,6 @@ mod tests {
     let circuit = layout_circuit(wires);
     println!("{:?}", crossings(&circuit));
     assert_eq!(get_closest_crossing(&circuit), 135);
+    assert_eq!(get_first_crossing(&circuit), 410);
   }
 }
