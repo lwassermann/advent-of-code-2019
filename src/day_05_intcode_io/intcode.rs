@@ -1,6 +1,32 @@
-fn lookup(memory: &[i64], address: usize) -> i64 {
-  let lvalue = memory[address] as usize;
-  memory[lvalue]
+enum ParameterType {
+  Position = 0,
+  Immediate = 1,
+}
+
+impl ParameterType {
+  fn from(digit: u8) -> ParameterType {
+    match digit {
+      1 => ParameterType::Immediate,
+      _ => ParameterType::Position,
+    }
+  }
+}
+
+struct Instruction {
+  opcode: u8,
+  param1: ParameterType,
+  param2: ParameterType,
+  param3: ParameterType,
+}
+
+fn lookup(memory: &[i64], address: usize, parameter_type: ParameterType) -> i64 {
+  match parameter_type {
+    ParameterType::Position => {
+      let lvalue = memory[address] as usize;
+      memory[lvalue]
+    }
+    ParameterType::Immediate => memory[address],
+  }
 }
 
 fn set(memory: &mut [i64], address: usize, value: i64) {
@@ -8,45 +34,67 @@ fn set(memory: &mut [i64], address: usize, value: i64) {
   memory[lvalue] = value;
 }
 
+fn get_digits(n: i64) -> [u8; 4] {
+  [
+    (n / 10000 % 10) as u8,
+    (n / 1000 % 10) as u8,
+    (n / 100 % 10) as u8,
+    (n / 1 % 100) as u8, // opcode uses two digits
+  ]
+}
+
+fn parse_instruction(value: i64) -> Instruction {
+  let [param3, param2, param1, opcode] = get_digits(value);
+
+  Instruction {
+    opcode: opcode as u8,
+    param1: ParameterType::from(param1),
+    param2: ParameterType::from(param2),
+    param3: ParameterType::from(param3),
+  }
+}
+
 pub fn interpret(memory: &mut [i64], answers: &[i64]) {
-  let mut instruction_pointer: usize = 0;
+  let mut ip: usize = 0; // instruction pointer
   let mut input = answers.into_iter();
   loop {
-    let opcode = memory[instruction_pointer];
+    let Instruction {
+      opcode,
+      param1,
+      param2,
+      param3: _param3, // Not yet used, but teased in the description
+    } = parse_instruction(memory[ip]);
     match opcode {
       1 => {
         set(
           memory,
-          instruction_pointer + 3,
-          lookup(memory, instruction_pointer + 1) + lookup(memory, instruction_pointer + 2),
+          ip + 3,
+          lookup(memory, ip + 1, param1) + lookup(memory, ip + 2, param2),
         );
-        instruction_pointer += 4;
+        ip += 4;
       }
       2 => {
         set(
           memory,
-          instruction_pointer + 3,
-          lookup(memory, instruction_pointer + 1) * lookup(memory, instruction_pointer + 2),
+          ip + 3,
+          lookup(memory, ip + 1, param1) * lookup(memory, ip + 2, param2),
         );
-        instruction_pointer += 4;
+        ip += 4;
       }
       3 => {
         let value = *input.next().expect("Not enough input provided");
-        set(memory, instruction_pointer + 1, value);
-        instruction_pointer += 2;
+        set(memory, ip + 1, value);
+        ip += 2;
       }
       4 => {
-        println!("{}", lookup(memory, instruction_pointer + 1));
-        instruction_pointer += 2;
+        println!("{}", lookup(memory, ip + 1, param1));
+        ip += 2;
       }
       99 => {
         return;
-        // instruction_pointer += 1;
+        // ip += 1;
       }
-      _ => panic!(
-        "Unknown opcode {} at address {}",
-        opcode, instruction_pointer
-      ),
+      _ => panic!("Unknown opcode {} at address {}", opcode, ip),
     }
   }
 }
