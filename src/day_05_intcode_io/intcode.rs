@@ -54,9 +54,10 @@ fn parse_instruction(value: i64) -> Instruction {
   }
 }
 
-pub fn interpret(memory: &mut [i64], answers: &[i64]) {
+pub fn interpret(memory: &mut [i64], answers: &[i64]) -> Vec<i64> {
   let mut ip: usize = 0; // instruction pointer
   let mut input = answers.into_iter();
+  let mut output = Vec::<i64>::new();
   loop {
     let Instruction {
       opcode,
@@ -65,6 +66,7 @@ pub fn interpret(memory: &mut [i64], answers: &[i64]) {
       param3: _param3, // Not yet used, but teased in the description
     } = parse_instruction(memory[ip]);
     match opcode {
+      // add
       1 => {
         set(
           memory,
@@ -73,6 +75,7 @@ pub fn interpret(memory: &mut [i64], answers: &[i64]) {
         );
         ip += 4;
       }
+      // multiply
       2 => {
         set(
           memory,
@@ -81,17 +84,50 @@ pub fn interpret(memory: &mut [i64], answers: &[i64]) {
         );
         ip += 4;
       }
+      // read input
       3 => {
         let value = *input.next().expect("Not enough input provided");
         set(memory, ip + 1, value);
         ip += 2;
       }
+      // output
       4 => {
-        println!("{}", lookup(memory, ip + 1, param1));
+        let value = lookup(memory, ip + 1, param1);
+        println!("{}", value);
+        output.push(value);
         ip += 2;
       }
+      // jump-if-true
+      5 => {
+        if lookup(memory, ip + 1, param1) != 0 {
+          ip = lookup(memory, ip + 2, param2) as usize;
+        } else {
+          ip += 3
+        }
+      }
+      // jump-if-false
+      6 => {
+        if lookup(memory, ip + 1, param1) == 0 {
+          ip = lookup(memory, ip + 2, param2) as usize;
+        } else {
+          ip += 3
+        }
+      }
+      // less-than
+      7 => {
+        let lt = lookup(memory, ip + 1, param1) < lookup(memory, ip + 2, param2);
+        set(memory, ip + 3, if lt { 1 } else { 0 });
+        ip += 4
+      }
+      // equals
+      8 => {
+        let eq = lookup(memory, ip + 1, param1) == lookup(memory, ip + 2, param2);
+        set(memory, ip + 3, if eq { 1 } else { 0 });
+        ip += 4
+      }
+      // exit
       99 => {
-        return;
+        return output;
         // ip += 1;
       }
       _ => panic!("Unknown opcode {} at address {}", opcode, ip),
@@ -141,7 +177,70 @@ mod tests {
   #[test]
   fn test_print_output() {
     let mut memory: &mut [i64] = &mut [4, 2, 99];
-    interpret(&mut memory, &[]);
+    let output = interpret(&mut memory, &[]);
     assert_eq!(memory, [4, 2, 99]);
+    assert_eq!(output, [99]);
+  }
+
+  #[test]
+  fn test_jump_if_true() {
+    let mut memory: &mut [i64] = &mut [1005, 2, 7, 2, 3, 0, 3, 99];
+    interpret(&mut memory, &[]);
+    assert_eq!(memory, [1005, 2, 7, 2, 3, 0, 3, 99]);
+  }
+
+  #[test]
+  fn test_jump_if_false() {
+    let mut memory: &mut [i64] = &mut [1006, 5, 7, 2, 3, 0, 3, 99];
+    interpret(&mut memory, &[]);
+    assert_eq!(memory, [1006, 5, 7, 2, 3, 0, 3, 99]);
+  }
+
+  #[test]
+  fn test_lt_true() {
+    let mut memory: &mut [i64] = &mut [7, 1, 2, 0, 99];
+    interpret(&mut memory, &[]);
+    assert_eq!(memory, [1, 1, 2, 0, 99]);
+  }
+  #[test]
+  fn test_lt_false() {
+    let mut memory: &mut [i64] = &mut [7, 2, 2, 0, 99];
+    interpret(&mut memory, &[]);
+    assert_eq!(memory, [0, 2, 2, 0, 99]);
+  }
+
+  #[test]
+  fn test_eq_true() {
+    let mut memory: &mut [i64] = &mut [1108, 2, 2, 0, 99];
+    interpret(&mut memory, &[]);
+    assert_eq!(memory, [1, 2, 2, 0, 99]);
+  }
+
+  #[test]
+  fn test_eq_false() {
+    let mut memory: &mut [i64] = &mut [1108, 2, 3, 0, 99];
+    interpret(&mut memory, &[]);
+    assert_eq!(memory, [0, 2, 3, 0, 99]);
+  }
+
+  const COMPARE_8: [i64; 47] = [
+    3, 21, 1008, 21, 8, 20, 1005, 20, 22, 107, 8, 21, 20, 1006, 20, 31, 1106, 0, 36, 98, 0, 0,
+    1002, 21, 125, 20, 4, 20, 1105, 1, 46, 104, 999, 1105, 1, 46, 1101, 1000, 1, 20, 4, 20, 1105,
+    1, 46, 98, 99,
+  ];
+
+  #[test]
+  fn test_new_instructions() {
+    let mut memory: &mut [i64] = &mut COMPARE_8.clone();
+    let output = interpret(&mut memory, &[3]);
+    assert_eq!(output, [999]);
+
+    let mut memory: &mut [i64] = &mut COMPARE_8.clone();
+    let output = interpret(&mut memory, &[8]);
+    assert_eq!(output, [1000]);
+
+    let mut memory: &mut [i64] = &mut COMPARE_8.clone();
+    let output = interpret(&mut memory, &[100]);
+    assert_eq!(output, [1001]);
   }
 }
