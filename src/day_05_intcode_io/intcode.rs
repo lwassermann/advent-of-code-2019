@@ -223,6 +223,11 @@ mod tests {
     assert_eq!(memory, [0, 2, 3, 0, 99]);
   }
 
+  fn test_program(memory: &mut [i64], answers: &[i64], expected_output: &[i64]) {
+    let output = interpret(memory, answers);
+    assert_eq!(output, expected_output);
+  }
+
   const COMPARE_8: [i64; 47] = [
     3, 21, 1008, 21, 8, 20, 1005, 20, 22, 107, 8, 21, 20, 1006, 20, 31, 1106, 0, 36, 98, 0, 0,
     1002, 21, 125, 20, 4, 20, 1105, 1, 46, 104, 999, 1105, 1, 46, 1101, 1000, 1, 20, 4, 20, 1105,
@@ -230,17 +235,21 @@ mod tests {
   ];
 
   #[test]
-  fn test_new_instructions() {
-    let mut memory: &mut [i64] = &mut COMPARE_8.clone();
-    let output = interpret(&mut memory, &[3]);
-    assert_eq!(output, [999]);
+  fn test_space_operator_eight() {
+    test_program(&mut COMPARE_8.clone(), &[3], &[999]);
+    test_program(&mut COMPARE_8.clone(), &[8], &[1000]);
+    test_program(&mut COMPARE_8.clone(), &[100], &[1001]);
+  }
 
-    let mut memory: &mut [i64] = &mut COMPARE_8.clone();
-    let output = interpret(&mut memory, &[8]);
-    assert_eq!(output, [1000]);
+  const LT_8_POSITION: [i64; 11] = [3, 9, 7, 9, 10, 9, 4, 9, 99, -1, 8];
+  const LT_8_IMMEDIATE: [i64; 9] = [3, 3, 1107, -1, 8, 3, 4, 3, 99];
 
-    let mut memory: &mut [i64] = &mut COMPARE_8.clone();
-    let output = interpret(&mut memory, &[100]);
-    assert_eq!(output, [1001]);
+  #[test]
+  fn test_less_than_eight() {
+    test_program(&mut LT_8_POSITION.clone(), &[3], &[1]);
+    test_program(&mut LT_8_POSITION.clone(), &[8], &[0]);
+
+    test_program(&mut LT_8_IMMEDIATE.clone(), &[3], &[1]);
+    test_program(&mut LT_8_IMMEDIATE.clone(), &[8], &[0]);
   }
 }
