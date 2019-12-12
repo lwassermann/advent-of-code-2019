@@ -252,4 +252,26 @@ mod tests {
     test_program(&mut LT_8_IMMEDIATE.clone(), &[3], &[1]);
     test_program(&mut LT_8_IMMEDIATE.clone(), &[8], &[0]);
   }
+
+  const EQ_8_IMMEDIATE: [i64; 9] = [3, 3, 1108, -1, 8, 3, 4, 3, 99];
+
+  #[test]
+  fn test_equals_eight() {
+    test_program(&mut EQ_8_IMMEDIATE.clone(), &[9], &[0]);
+    test_program(&mut EQ_8_IMMEDIATE.clone(), &[8], &[1]);
+    test_program(&mut EQ_8_IMMEDIATE.clone(), &[7], &[0]);
+  }
+
+  // Here are some jump tests that take an input, then output 0 if the input was zero or 1 if the input was non-zero:
+  const JMP_ON_ZERO_POSITION: [i64; 16] = [3, 12, 6, 12, 15, 1, 13, 14, 13, 4, 13, 99, -1, 0, 1, 9];
+  const JMP_ON_ZERO_IMMEDIATE: [i64; 13] = [3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1];
+
+  #[test]
+  fn test_jumps() {
+    test_program(&mut JMP_ON_ZERO_POSITION.clone(), &[9], &[1]);
+    test_program(&mut JMP_ON_ZERO_POSITION.clone(), &[0], &[0]);
+
+    test_program(&mut JMP_ON_ZERO_IMMEDIATE.clone(), &[4], &[1]);
+    test_program(&mut JMP_ON_ZERO_IMMEDIATE.clone(), &[0], &[0]);
+  }
 }
