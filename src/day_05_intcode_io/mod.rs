@@ -12,9 +12,11 @@ fn load_memory() -> Vec<i64> {
 }
 
 pub fn calculate() {
-  let mut memory = load_memory();
+  let mut memory_ac = load_memory();
   println!("Starting air condition");
-  intcode::interpret(&mut memory, &[1]);
+  intcode::interpret(&mut memory_ac, &[1]);
+
+  let mut memory_tr = load_memory();
   println!("Starting the thermal radiators");
-  intcode::interpret(&mut memory, &[5]);
+  intcode::interpret(&mut memory_tr, &[5]);
 }
